@@ -36,12 +36,12 @@ sudo nginx -t
 sudo systemctl restart nginx
 
 # Obtain SSL certificate
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+sudo certbot --nginx -d booth.chatflow.id -d www.booth.chatflow.id
 
 # Set up automatic SSL renewal
 sudo certbot renew --dry-run
 
 # Verify the application is running
-curl -I https://your-domain.com
+curl -I https://booth.chatflow.id
 
 echo "Deployment completed successfully!" 
