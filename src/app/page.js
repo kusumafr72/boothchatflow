@@ -1,102 +1,260 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import Link from "next/link";
+
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [selectedVoice, setSelectedVoice] = useState('nova');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const bottomRef = useRef(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    // --- AVATAR MAPPING ---
+  const avatarMap = {
+      nova: '/assets/nova.png',
+      onyx: '/assets/onyx.png',
+      alloy: '/assets/alloy.png',
+      echo: '/assets/echo.png',
+      fable: '/assets/fable.png',
+      shimmer: '/assets/shimmer.png',
+  };
+    
+  const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
+
+  // Preload voices
+  useEffect(() => {
+    if (!synth) return;
+    const load = () => synth.getVoices();
+    synth.onvoiceschanged = load;
+    load();
+  }, [synth]);
+
+  // auto-scroll
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // speak helper
+  async function speak(text) {
+    if (!text) return;
+  
+    try {
+      setIsSpeaking(true); // Start pulsing
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: selectedVoice }),
+      });
+  
+      if (!res.ok) {
+        console.error('TTS failed');
+        setIsSpeaking(false);
+        return;
+      }
+  
+      const audioBlob = await res.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+  
+      audio.onended = () => {
+        setIsSpeaking(false); // Stop pulsing
+      };
+  
+      audio.play();
+    } catch (error) {
+      console.error('Error playing TTS:', error);
+      setIsSpeaking(false);
+    }
+  }
+  
+
+  // send message & get AI reply
+  async function sendMessage(content, role = 'user') {
+    setMessages(prev => [...prev, { role, content }]);
+  
+    if (role === 'user') {
+      const savedKnowledge = JSON.parse(localStorage.getItem("knowledgeBase")) || [];
+  
+      const systemInstruction = `You are a helpful assistant. Do not start your response by saying "Assistant:". Only answer naturally.\n\n`;
+      const knowledgeText = savedKnowledge.length
+        ? `Here is some important background knowledge:\n- ${savedKnowledge.join("\n- ")}\n\n`
+        : "";
+  
+      // Get the last 20 messages
+      const recentMessages = [...messages, { role: 'user', content }].slice(-20);
+  
+      // Format them into conversation
+      const conversationHistory = recentMessages
+        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n');
+  
+      const fullPrompt = `${systemInstruction}${knowledgeText}Here is the conversation so far:\n${conversationHistory}\n\nNow answer the user.`;
+  
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: fullPrompt }),
+      });
+  
+      const { reply } = await res.json();
+      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+      speak(reply);
+    }
+  }
+  
+  // form submit
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!input.trim()) return;
+    sendMessage(input.trim());
+    setInput('');
+  }
+
+  // speech recognition
+  function handleVoiceInput() {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert('Speech Recognition not supported');
+      return;
+    }
+    const rec = new webkitSpeechRecognition();
+    rec.lang = 'id-ID';
+    rec.onstart = () => setIsListening(true);
+    rec.onend = () => setIsListening(false);
+    rec.onresult = ev => {
+      const text = ev.results[0][0].transcript;
+      sendMessage(text, 'user');
+      setInput('');
+    };
+    rec.start();
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-gradient-to-r from-[#181c2f] to-[#23263a] text-white font-poppins">
+      {/* Top Bar */}
+      <header className="w-full flex items-center justify-between px-10 py-4 bg-[#20243a] shadow-lg z-50">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl font-extrabold text-[#6c63ff]">Chatflow</span>
+          <span className="ml-2 px-3 py-1 rounded-lg bg-gradient-to-r from-[#00e0ff] to-[#a259ff] text-white font-semibold text-sm">WhatsApp AI Assistant</span>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+        <span className="text-sm text-gray-400 font-medium">Powered by OpenAI</span>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center py-8">
+        <div className="flex gap-6 items-center justify-center w-full max-w-[1800px] px-6">
+          {/* Chat Box */}
+          <div className="flex flex-col justify-between bg-[var(--glass)] border border-[var(--glass-border)] rounded-3xl shadow-2xl backdrop-blur-lg backdrop-saturate-150 flex-1 max-w-3xl h-[600px] min-w-[350px]">
+            <div className="flex-1 overflow-y-auto p-8">
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex mb-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-xs px-5 py-3 rounded-2xl shadow-lg text-base font-medium transition-all duration-200
+                      ${msg.role === 'user'
+                        ? 'bg-gradient-to-r from-[#a259ff] to-[#00e0ff] text-white shadow-[0_0_16px_#00e0ff55]'
+                        : 'bg-[#23263a] text-[#ededed] border border-[#00e0ff33] shadow-[0_0_12px_#a259ff33]'}
+                    `}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              <div ref={bottomRef} />
+            </div>
+            {/* Input bar attached to chat */}
+            <form
+              onSubmit={handleSubmit}
+              className="flex w-full gap-3 bg-[var(--glass)] border-t border-[var(--glass-border)] p-4 rounded-b-3xl shadow-2xl backdrop-blur-lg backdrop-saturate-150 z-50"
+            >
+              <button
+                type="button"
+                onClick={handleVoiceInput}
+                className="p-4 bg-gradient-to-tr from-[#a259ff] to-[#00e0ff] rounded-full shadow-lg hover:from-[#00e0ff] hover:to-[#a259ff] transition-all duration-200 border-2 border-[#00e0ff]/40 text-xl"
+              >
+                🎤
+              </button>
+              <input
+                type="text"
+                className="flex-1 p-4 rounded-xl bg-[#23263a] text-white focus:outline-none focus:ring-2 focus:ring-[#00e0ff] font-medium text-base border border-[#00e0ff22] shadow-inner backdrop-blur-md"
+                placeholder="Type your message..."
+                value={input}
+                onChange={e => setInput(e.target.value)}
+              />
+              <button
+                type="submit"
+                className="p-4 bg-gradient-to-tr from-[#00e0ff] to-[#a259ff] rounded-full shadow-lg hover:from-[#a259ff] hover:to-[#00e0ff] transition-all duration-200 border-2 border-[#00e0ff]/40 text-xl"
+              >
+                ➤
+              </button>
+            </form>
+          </div>
+
+          {/* Avatar + Controls Box */}
+          <div className="flex flex-col items-center justify-between bg-[var(--glass)] border border-[var(--glass-border)] rounded-3xl shadow-2xl backdrop-blur-lg backdrop-saturate-150 flex-1 max-w-3xl h-[600px] min-w-[350px] p-8">
+            <div className="flex flex-col items-center w-full">
+              <div className="relative w-64 h-64 flex items-center justify-center mb-6">
+                <img
+                  src={avatarMap[selectedVoice]}
+                  alt="AI Avatar"
+                  className="relative w-full h-full rounded-full shadow-2xl object-cover"
+                />
+                {isListening && (
+                  <div className="absolute inset-0 rounded-full border-4 border-[#a259ff] animate-pulse" />
+                )}
+                {isSpeaking && (
+                  <div className="absolute inset-0 rounded-full border-4 border-[#00e0ff] animate-pulse" />
+                )}
+              </div>
+              {/* Animated bar under avatar when speaking */}
+              <div className="h-10 flex items-end justify-center w-full mb-6">
+                {isSpeaking && (
+                  <div className="flex gap-2 h-full items-end">
+                    {[...Array(16)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-3 rounded bg-gradient-to-t from-[#00e0ff] to-[#a259ff] animate-wave"
+                        style={{
+                          height: `${Math.random() * 32 + 16}px`,
+                          animationDelay: `${i * 0.08}s`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Controls inside avatar box */}
+            <div className="flex flex-col items-center w-full gap-4">
+              <Link href="/knowledge" className="w-full">
+                <button className="w-full bg-gradient-to-r from-[#00e0ff] to-[#a259ff] px-4 py-3 rounded-xl shadow-lg font-semibold text-white hover:from-[#a259ff] hover:to-[#00e0ff] transition-all duration-200 border border-[#00e0ff]/30 backdrop-blur-md">
+                  Knowledge
+                </button>
+              </Link>
+              <select
+                value={selectedVoice}
+                onChange={e => setSelectedVoice(e.target.value)}
+                className="w-full bg-[#23263a] border border-[#00e0ff]/30 text-white px-3 py-3 rounded-xl shadow-lg font-semibold focus:ring-2 focus:ring-[#00e0ff] backdrop-blur-md"
+              >
+                <option value="nova">Nova</option>
+                <option value="onyx">Onyx</option>
+                <option value="alloy">Alloy</option>
+                <option value="echo">Echo</option>
+                <option value="fable">Fable</option>
+                <option value="shimmer">Shimmer</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Bar */}
+      <footer className="w-full px-10 py-3 bg-[#20243a] text-center text-gray-400 text-sm font-medium shadow-lg z-50">
+        © Chatflow - Asisten AI WhatsApp untuk Bisnis Anda
       </footer>
     </div>
   );
