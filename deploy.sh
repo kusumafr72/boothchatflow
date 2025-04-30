@@ -26,17 +26,20 @@ pm2 save
 pm2 startup
 
 # Copy Nginx configuration
-sudo cp nginx.conf /etc/nginx/sites-available/my-ai-assistant
-sudo ln -s /etc/nginx/sites-available/my-ai-assistant /etc/nginx/sites-enabled/
+sudo cp nginx.conf /etc/nginx/sites-available/booth.chatflow.id
+sudo ln -s /etc/nginx/sites-available/booth.chatflow.id /etc/nginx/sites-enabled/
 
 # Test Nginx configuration
 sudo nginx -t
 
-# Restart Nginx
-sudo systemctl restart nginx
+# Stop Nginx temporarily
+sudo systemctl stop nginx
 
-# Obtain SSL certificate
-sudo certbot --nginx -d booth.chatflow.id -d www.booth.chatflow.id
+# Obtain SSL certificate using standalone mode
+sudo certbot certonly --standalone -d booth.chatflow.id -d www.booth.chatflow.id
+
+# Start Nginx again
+sudo systemctl start nginx
 
 # Set up automatic SSL renewal
 sudo certbot renew --dry-run
