@@ -4,13 +4,11 @@ module.exports = {
     script: 'npm',
     args: 'start',
     env: {
-      PORT: 3001,
+      PORT: 3000,
       NODE_ENV: 'production'
     },
-    instances: 'max',
-    exec_mode: 'cluster',
+    instances: 1,
     autorestart: true,
-    watch: false,
-    max_memory_restart: '1G'
+    watch: false
   }]
 }; 
