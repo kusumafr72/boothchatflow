@@ -139,7 +139,14 @@ export default function Home() {
           <span className="text-3xl font-extrabold text-[#6c63ff]">Chatflow</span>
           <span className="ml-2 px-3 py-1 rounded-lg bg-gradient-to-r from-[#00e0ff] to-[#a259ff] text-white font-semibold text-sm">WhatsApp AI Assistant</span>
         </div>
-        <span className="text-sm text-gray-400 font-medium">Powered by OpenAI</span>
+        <Link href="/settings">
+          <button className="flex items-center gap-2 bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white px-4 py-2 rounded-lg transition-all duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
+            Settings
+          </button>
+        </Link>
       </header>
 
       {/* Main Content */}
@@ -194,32 +201,32 @@ export default function Home() {
             </form>
           </div>
 
-          {/* Avatar + Controls Box */}
-          <div className="flex flex-col items-center justify-between bg-[var(--glass)] border border-[var(--glass-border)] rounded-3xl shadow-2xl backdrop-blur-lg backdrop-saturate-150 flex-1 max-w-3xl h-[600px] min-w-[350px] p-8">
-            <div className="flex flex-col items-center w-full">
-              <div className="relative w-64 h-64 flex items-center justify-center mb-6">
+          {/* Avatar Box */}
+          <div className="flex flex-col items-center justify-center bg-[var(--glass)] border border-[var(--glass-border)] rounded-3xl shadow-2xl backdrop-blur-lg backdrop-saturate-150 flex-1 max-w-3xl h-[600px] min-w-[350px] p-8">
+            <div className="flex flex-col items-center justify-center w-full h-full">
+              <div className="relative w-80 h-80 flex items-center justify-center">
                 <img
                   src={avatarMap[selectedVoice]}
                   alt="AI Avatar"
                   className="relative w-full h-full rounded-full shadow-2xl object-cover"
                 />
                 {isListening && (
-                  <div className="absolute inset-0 rounded-full border-4 border-[#a259ff] animate-pulse" />
+                  <div className="absolute inset-0 rounded-full border-8 border-[#a259ff] animate-pulse" />
                 )}
                 {isSpeaking && (
-                  <div className="absolute inset-0 rounded-full border-4 border-[#00e0ff] animate-pulse" />
+                  <div className="absolute inset-0 rounded-full border-8 border-[#00e0ff] animate-pulse" />
                 )}
               </div>
               {/* Animated bar under avatar when speaking */}
-              <div className="h-10 flex items-end justify-center w-full mb-6">
+              <div className="h-16 flex items-end justify-center w-full mt-8">
                 {isSpeaking && (
                   <div className="flex gap-2 h-full items-end">
                     {[...Array(16)].map((_, i) => (
                       <div
                         key={i}
-                        className="w-3 rounded bg-gradient-to-t from-[#00e0ff] to-[#a259ff] animate-wave"
+                        className="w-4 rounded bg-gradient-to-t from-[#00e0ff] to-[#a259ff] animate-wave"
                         style={{
-                          height: `${Math.random() * 32 + 16}px`,
+                          height: `${Math.random() * 48 + 24}px`,
                           animationDelay: `${i * 0.08}s`,
                         }}
                       />
@@ -227,26 +234,6 @@ export default function Home() {
                   </div>
                 )}
               </div>
-            </div>
-            {/* Controls inside avatar box */}
-            <div className="flex flex-col items-center w-full gap-4">
-              <Link href="/knowledge" className="w-full">
-                <button className="w-full bg-gradient-to-r from-[#00e0ff] to-[#a259ff] px-4 py-3 rounded-xl shadow-lg font-semibold text-white hover:from-[#a259ff] hover:to-[#00e0ff] transition-all duration-200 border border-[#00e0ff]/30 backdrop-blur-md">
-                  Knowledge
-                </button>
-              </Link>
-              <select
-                value={selectedVoice}
-                onChange={e => setSelectedVoice(e.target.value)}
-                className="w-full bg-[#23263a] border border-[#00e0ff]/30 text-white px-3 py-3 rounded-xl shadow-lg font-semibold focus:ring-2 focus:ring-[#00e0ff] backdrop-blur-md"
-              >
-                <option value="nova">Nova</option>
-                <option value="onyx">Onyx</option>
-                <option value="alloy">Alloy</option>
-                <option value="echo">Echo</option>
-                <option value="fable">Fable</option>
-                <option value="shimmer">Shimmer</option>
-              </select>
             </div>
           </div>
         </div>

@@ -1,14 +1,16 @@
 module.exports = {
   apps: [{
     name: 'my-ai-assistant',
-    script: 'npm',
-    args: 'start',
+    script: '/usr/bin/npm',
+    args: 'run start',
+    cwd: '/root/my-ai-assistant',
     env: {
       PORT: 3000,
       NODE_ENV: 'production'
     },
     instances: 1,
     autorestart: true,
-    watch: false
+    watch: false,
+    exec_mode: 'fork'
   }]
 }; 
