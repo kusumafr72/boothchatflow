@@ -183,7 +183,7 @@ export default function Home() {
                 onClick={handleVoiceInput}
                 className="p-4 bg-gradient-to-tr from-[#a259ff] to-[#00e0ff] rounded-full shadow-lg hover:from-[#00e0ff] hover:to-[#a259ff] transition-all duration-200 border-2 border-[#00e0ff]/40 text-xl"
               >
-                🎤
+                🎙️
               </button>
               <input
                 type="text"
