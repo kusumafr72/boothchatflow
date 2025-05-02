@@ -5,7 +5,7 @@ module.exports = {
     args: 'run start',
     cwd: '/root/my-ai-assistant',
     env: {
-      PORT: 3000,
+      PORT: 3001,
       NODE_ENV: 'production'
     },
     instances: 1,
